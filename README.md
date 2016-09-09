@@ -34,6 +34,8 @@
 
 # **ПС: Для сборки проекта нужен ключ Vuforia, я свой убрал, для теста на Android можете в папке с Bin скачать APK.** #
 
+**Для iOS нет библиотеки плагина libVuforia.a, она большая, так что грузить плагин с сайта [Vuforia](http://Vuforia.com) сам Git прописал!**
+
 # **Маркер для игры:** #
 
 ![Capture2.PNG](https://bitbucket.org/repo/4Lr5go/images/3017494986-Capture2.PNG)
