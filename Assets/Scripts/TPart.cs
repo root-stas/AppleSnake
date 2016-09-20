@@ -2,28 +2,37 @@
 using SharedSpace;
 
 public class TPart : MonoBehaviour {
-
+    /// <summary>
+    /// Состояние элемента карты
+    /// </summary>
     public EPartState State;
-    //0 - Wall, 1 - Apple
+    
+    /// <summary>
+    /// Тип объекта: 0 - стена, 1 - яблоко
+    /// </summary>
     public byte Type;
-
+    //Положение на карте
+    public int _width, _length;
+    /// <summary>
+    /// Скорость анимации
+    /// </summary>
     private float Speed = 5f;
     private Vector3 StartSize = Vector3.one * 0.1f;
     private Vector3 StartPosition;
     private Vector3 NewPosition;
 
-    // Use this for initialization
+    //Установка на карте
     void Start () {
         transform.localScale = StartSize;
         StartPosition = transform.localPosition;
     }
-	
+	//Перемещение объекта на новую позицию
     public void NewLive(Vector3 _pos)
     {
         NewPosition = _pos;
     }
 
-	// Update is called once per frame
+	//Обновление анимации
 	void Update () {
         switch (State)
         {
@@ -45,7 +54,7 @@ public class TPart : MonoBehaviour {
                 break;
             case EPartState.ANIM:
                 transform.GetChild(0).RotateAround(transform.GetChild(0).position, transform.up, 10f * Speed * Time.deltaTime);
-                transform.localPosition = StartPosition + Vector3.up * Mathf.PerlinNoise(Time.time, 10) * 0.2f;
+                transform.localPosition = StartPosition + Vector3.up * Mathf.PerlinNoise(Time.time, 10) * 0.1f;
                 break;
         }
 	}

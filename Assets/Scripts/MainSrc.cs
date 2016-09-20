@@ -8,18 +8,10 @@ using SharedSpace;
 public class MainSrc : MonoBehaviour
 {
     /// <summary>
-    /// Начальное время на выполнения задания
+    /// Скорость змейки
     /// </summary>
-    public int StartTime = 60;
-    /// <summary>
-    /// Шаг, с которым будет уменьшаться начальное время на каждом новом уровне
-    /// </summary>
-    public int TimeStep = 5;
-    /// <summary>
-    /// Так сказать чувствительность при сравнении рисунка с заданием, чем больше тем больше отклонений может быть от задания (был квадрат, нарисовали круг, а игра посчитает что все нормально)
-    /// </summary>
-    [Range(0.2f, 1f)]
-    public float Difficulty = 0.5f;
+    [Range(0.02f, 0.05f)]
+    public float SnakeSpeed = 0.02f;
 
     /// <summary>
     /// Объект указателя с эффектом хвоста кометы
@@ -28,33 +20,34 @@ public class MainSrc : MonoBehaviour
 
     private Slider MapWSlider;
     private Slider MapLSlider;
+    /// <summary>
+    /// Объект карты уровня
+    /// </summary>
     private TMap GameMap;
+    /// <summary>
+    /// Список хранящий всех змей на уровне
+    /// </summary>
     private List<TSnake> Snakes = new List<TSnake>();
 
     /// Элементы игрового интерфейса и игровых экранов 
     /// <summary>
-    /// Текстовое поле отображающие остаток времени на выполнение задания
-    /// </summary>
-    private Text InfoTxT;
-    /// Элементы игрового интерфейса и игровых экранов 
-    /// <summary>
-    /// Текстовое поле отображающие остаток времени на выполнение задания
+    /// Текстовое поле отображающее счет игры
     /// </summary>
     private Text CurScoreTxT;
     /// <summary>
-    /// Текстовое поле отображающие счет игрока
+    /// Текстовое поле отображающее лучший счет игрока
     /// </summary>
     private Text BestScoreTxT;
     /// <summary>
-    /// Экран меню, кнопки новой игры, редактора и выхода
+    /// Экран меню, кнопки новой игры, редактора маркера и выхода
     /// </summary>
     private GameObject MenuUI;
     /// <summary>
-    /// Игровой экран, кнопка выхода в меню и время раунда
+    /// Игровой экран, кнопка выхода в меню и счет раунда
     /// </summary>
     private GameObject GameUI;
     /// <summary>
-    /// Экран диалога редактора, !!!set size map!!! или выход в меню
+    /// Экран диалога размера карты
     /// </summary>
     private GameObject EditorUI;
     /// <summary>
@@ -62,7 +55,7 @@ public class MainSrc : MonoBehaviour
     /// </summary>
     private GameObject DialogUI;
     /// <summary>
-    /// Окно проигрыша со счетом и перезапуском уровня
+    /// Экран создания маркера
     /// </summary>
     private GameObject TargetUI;
 
@@ -80,7 +73,6 @@ public class MainSrc : MonoBehaviour
         TargetUI = GameObject.Find("CreateMaskUI");
         CurScoreTxT = GameObject.Find("TimeTxt").GetComponent<Text>() as Text;
         BestScoreTxT = GameObject.Find("ScoreTxt").GetComponent<Text>() as Text;
-        InfoTxT = GameObject.Find("InfoTxt").GetComponent<Text>() as Text;
         MapWSlider = GameObject.Find("MapWSlider").GetComponent<Slider>();
         MapLSlider = GameObject.Find("MapLSlider").GetComponent<Slider>();
 
@@ -90,65 +82,59 @@ public class MainSrc : MonoBehaviour
     }
 
     /// <summary>
-    /// Таймер в 1с, обновляет ... игры
+    /// Таймер в 1с, обновляет счет игры на экране
     /// </summary>
-    /// <returns></returns>
     IEnumerator OneSecEvent()
     {
         while (true)
         {
             if (SharedData.GameState == EState.GAME)
-            {
                 CurScoreTxT.text = SharedData.CurrentScore.ToString();
-            }
             yield return new WaitForSeconds(1);
         }
     }
-    private Vector2 MouseDownPos;
+
     //Обновление экрана игры и обработка ввода
     void Update()
     {
+        //Рисуем эффект указателя
         if (Cursor != null) Cursor.position = Camera.main.ScreenPointToRay(Input.mousePosition).GetPoint(1f);
         switch (SharedData.GameState)
         {
             case EState.GAME:
                 if (Input.GetButtonUp("Cancel")) MenuBtn((int)EState.GAME_DIALOG);
 
+                //Обработка ввода и поворот змей если нужно
                 float _input = Input.GetAxis("Horizontal");
-                for (int _snakeID = 0; _snakeID < Snakes.Count; _snakeID++)
-                {
-                    if (Snakes[_snakeID].MoveState == 1)
-                    {
-                        if (_input > 0.5f) { Snakes[_snakeID].MoveState = 2; }
-                        if (_input < -0.5f) { Snakes[_snakeID].MoveState = 0; }
 
-                        if (Input.GetMouseButtonUp(0))
+                if (Input.GetMouseButtonUp(0))
+                {
+                    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                    float rayDistance;
+                    if (GameMap.GroundPlane.Raycast(ray, out rayDistance))
+                    {
+                        Vector3 Dot = ray.GetPoint(rayDistance) - transform.position;
+                        for (int _snakeID = 0; _snakeID < Snakes.Count; _snakeID++)
                         {
-                            MouseDownPos = Camera.main.WorldToScreenPoint(Snakes[_snakeID].transform.position);
-                            if (Snakes[_snakeID].Direction == 0)
-                                if (MouseDownPos.y > Input.mousePosition.y)
-                                    Snakes[_snakeID].MoveState = 2;
-                                else
-                                    Snakes[_snakeID].MoveState = 0;
-                            if (Snakes[_snakeID].Direction == 1)
-                                if (MouseDownPos.x > Input.mousePosition.x)
-                                    Snakes[_snakeID].MoveState = 2;
-                                else
-                                    Snakes[_snakeID].MoveState = 0;
-                            if (Snakes[_snakeID].Direction == 3)
-                                if (MouseDownPos.x > Input.mousePosition.x)
-                                    Snakes[_snakeID].MoveState = 0;
-                                else
-                                    Snakes[_snakeID].MoveState = 2;
-                            if (Snakes[_snakeID].Direction == 2)
-                                if (MouseDownPos.y > Input.mousePosition.y)
-                                    Snakes[_snakeID].MoveState = 0;
-                                else
-                                    Snakes[_snakeID].MoveState = 2;
+                            _input = (Snakes[_snakeID].NextPos.x - Snakes[_snakeID].transform.localPosition.x) * (Dot.z - Snakes[_snakeID].transform.localPosition.z) - (Snakes[_snakeID].NextPos.z - Snakes[_snakeID].transform.localPosition.z) * (Dot.x - Snakes[_snakeID].transform.localPosition.x);
+                            if (_input > 0f) Snakes[_snakeID].MoveState = 0;
+                            if (_input < 0f) Snakes[_snakeID].MoveState = 2;
+                            _input = 0f;
                         }
                     }
                 }
-                if (_input > 0.5f || _input < -0.5f) Input.ResetInputAxes();
+
+                //Поворот стрелками или геймпадом
+                if (_input > 0.5f || _input < -0.5f)
+                {
+                    for (int _snakeID = 0; _snakeID < Snakes.Count; _snakeID++)
+                    if (Snakes[_snakeID].MoveState == 1)
+                    {
+                        if (_input > 0.5f) Snakes[_snakeID].MoveState = 2;
+                        if (_input < -0.5f) Snakes[_snakeID].MoveState = 0;
+                    }
+                    Input.ResetInputAxes(); _input = 0;
+                }
 
                 break;
             case EState.MAP_SETTINGS:
@@ -158,11 +144,8 @@ public class MainSrc : MonoBehaviour
             case EState.TARGET_CREATOR:
                 if (Input.GetButtonUp("Cancel")) MenuBtn((int)EState.MENU);
                 if (Input.GetMouseButtonUp(0))
-                {         
-                    // Trigger an autofocus event
                     CameraDevice.Instance.SetFocusMode(CameraDevice.FocusMode.FOCUS_MODE_TRIGGERAUTO);
-                }
-                if (Input.GetKeyUp(KeyCode.Return))
+                if (Input.GetButtonUp("Submit"))
                 {
                     UDTEventHandler UDTE = GameObject.Find("UserDefinedTargetBuilder").GetComponent<UDTEventHandler>();
                     UDTE.BuildNewTarget();
@@ -170,16 +153,18 @@ public class MainSrc : MonoBehaviour
                 break;
             case EState.MENU:
                 if (Input.GetButtonUp("Cancel")) Application.Quit();
-                if (Input.GetKeyUp(KeyCode.Return)) MenuBtn((int)EState.GAME);
-                if (Input.GetKeyUp(KeyCode.Space)) MenuBtn((int)EState.TARGET_CREATOR);
+                if (Input.GetButtonUp("Submit")) MenuBtn((int)EState.GAME);
+                if (Input.GetButtonUp("Fire2")) MenuBtn((int)EState.TARGET_CREATOR);
                 break;
             case EState.GAME_DIALOG:
                 if (Input.GetButtonUp("Cancel")) MenuBtn((int)EState.MENU);
-                if (Input.GetKeyUp(KeyCode.Return)) MenuBtn((int)EState.GAME);
+                if (Input.GetButtonUp("Submit")) MenuBtn((int)EState.GAME);
                 break;
         }
     }
-
+    /// <summary>
+    /// Метод убивающий или разрезающий змей, если не передать второй параметр - то убивает змею переданную в первом параметре
+    /// </summary>
     public void SnakeReport(TSnake _snake, int _partID = -1)
     {
         int _ID = Snakes.IndexOf(_snake);
@@ -190,38 +175,34 @@ public class MainSrc : MonoBehaviour
         }
         else
         {
-            //Cut snake
+            //Создаем новую змею с головой в хвосте делимой
             GameObject Snake = (GameObject)Object.Instantiate(Resources.Load("Prefabs/SnakeStart"));
             Snake.transform.SetParent(transform);
             Snake.transform.localScale = Vector3.one;
-            Snake.transform.localPosition = Vector3.zero;
-            Snakes.Add(Snake.AddComponent<TSnake>());
+            Snake.transform.localPosition = Snakes[_ID].Body[0].Position;
             Snake.transform.GetChild(0).localRotation = Snakes[_ID].transform.GetChild(0).localRotation;
+            Snakes.Add(Snake.AddComponent<TSnake>());
+            Snakes[Snakes.Count - 1].NextPos = Snakes[_ID].Body[0].Position;
             Snakes[Snakes.Count - 1].ChackCollider = true;
             Snakes[Snakes.Count - 1].GameMap = GameMap;
-            Snakes[Snakes.Count - 1].Direction = Snakes[_ID].Direction;
-            Snakes[Snakes.Count - 1].WidthPos = Snakes[_ID].Body[0].WidthPos;
-            Snakes[Snakes.Count - 1].LengthPos = Snakes[_ID].Body[0].LengthPos;
-
-            if (Snakes[_ID].Direction == 2) Snakes[Snakes.Count - 1].WidthPos -= 2;
-            if (Snakes[_ID].Direction == 1) Snakes[Snakes.Count - 1].LengthPos -= 2;
-            if (Snakes[_ID].Direction == 3) Snakes[Snakes.Count - 1].LengthPos += 2;
-            if (Snakes[_ID].Direction == 0) Snakes[Snakes.Count - 1].WidthPos += 2;
-
+            Snakes[Snakes.Count - 1].Speed = SnakeSpeed;
             Snakes[Snakes.Count - 1].Main = GetComponent<MainSrc>();
 
+            //Удаляем часть теля в старой змее и создаем аналогичные в новой
             for (int _id = _partID + 1; _id >= 0; _id--)
             {
+                if (_id > 0 && _id < _partID)
+                    Snakes[Snakes.Count - 1].AddNewPart(true);
+
                 GameObject.Destroy(Snakes[_ID].Body[_id].transform.gameObject);
                 Snakes[_ID].Body.Remove(Snakes[_ID].Body[_id]);
                 if (_id == _partID + 1)
-                {
                     Snakes[_ID].AddNewPart(false, _id);
-                }
             }
 
             _snake.ChackCollider = true;
         }
+        //Если не осталось змей - то сообщаем об окончании уровня
         if (Snakes.Count < 1) MenuBtn((int)EState.GAME_DIALOG);
     }
 
@@ -231,6 +212,9 @@ public class MainSrc : MonoBehaviour
     /// <param name="_newState">задает новое состояние игре, принимает значения EState</param>
     public void MenuBtn(int _newState)
     {
+        //Фокусируем изображение физической камеры
+        CameraDevice.Instance.SetFocusMode(CameraDevice.FocusMode.FOCUS_MODE_TRIGGERAUTO);
+
         //Обнуление состояния
         if (EditorUI != null) EditorUI.SetActive(false);
         if (DialogUI != null) DialogUI.SetActive(false);
@@ -247,6 +231,7 @@ public class MainSrc : MonoBehaviour
         }
         Snakes.Clear();
         SharedData.BodyCount = 0;
+
         //Задание нового состояния
         switch (SharedData.GameState)
         {
@@ -264,16 +249,18 @@ public class MainSrc : MonoBehaviour
                     GameMap.transform = transform;
 
                 }
+                GameMap.MapWidth = (int)MapWSlider.value;
+                GameMap.MapLength = (int)MapLSlider.value;
+                GameMap.GenerateMap();
+                //Создаем первую змею
                 GameObject Snake = (GameObject)Object.Instantiate(Resources.Load("Prefabs/SnakeStart"));
                 Snake.transform.SetParent(transform);
                 Snake.transform.localScale = Vector3.one;
                 Snake.transform.localPosition = Vector3.zero;
                 Snakes.Add(Snake.AddComponent<TSnake>());
                 Snakes[0].GameMap = GameMap;
+                Snakes[0].Speed = SnakeSpeed;
                 Snakes[0].Main = GetComponent<MainSrc>();
-                GameMap.MapWidth = (int)MapWSlider.value;
-                GameMap.MapLength = (int)MapLSlider.value;
-                GameMap.GenerateMap();
 
                 break;
             case EState.MAP_SETTINGS:

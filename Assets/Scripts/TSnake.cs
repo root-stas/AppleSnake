@@ -4,15 +4,31 @@ using SharedSpace;
 
 public class TSnake : MonoBehaviour
 {
+    /// <summary>
+    /// Класс частей тела змеи
+    /// </summary>
     public class TBody
     {
+        /// <summary>
+        /// Позиция следования
+        /// </summary>
         public Vector3 Position;
+        /// <summary>
+        /// Следующее направление взгляда части тела
+        /// </summary>
         public int NextDirection;
+        /// <summary>
+        /// Текущее направление взгляда части тела
+        /// </summary>
         public int CurDirection;
+        /// <summary>
+        /// Ссылка на объект тела
+        /// </summary>
         public Transform transform;
-        public int WidthPos;
-        public int LengthPos;
 
+        /// <summary>
+        /// Инициализация части тела 
+        /// </summary>
         public TBody(Vector3 _pos, byte _dir, Transform _trans)
         {
             Position = _pos;
@@ -22,31 +38,49 @@ public class TSnake : MonoBehaviour
     }
 
     //0 - turn left, 2 - turn right, 1 - move
+    /// <summary>
+    /// Триггер указывающий на необходимость поворота змеи
+    /// </summary>
     public byte MoveState = 1;
+    /// <summary>
+    /// Ссылка на карту уровня
+    /// </summary>
     public TMap GameMap;
-    public float Speed = 0.5f;
+    /// <summary>
+    /// Скорость змеи
+    /// </summary>
+    public float Speed;
+    /// <summary>
+    /// Ссылка на главный класс, для общения змей между собой
+    /// </summary>
     public MainSrc Main;
-
     //0 - forward, 1 - right, 2 - back, 3 - left
+    /// <summary>
+    /// Направление движения змеи
+    /// </summary>
     public byte Direction = 0;
-
-    public int WidthPos = 2;
-    public int LengthPos = 2;
+    //Позиция головы змеи на карте
+    public int WidthPos;
+    public int LengthPos;
+    /// <summary>
+    /// Триггер контролирующий проверку столкновений
+    /// </summary>
     public bool ChackCollider = true;
-
+    /// <summary>
+    /// Список хранящий куски тела змеи
+    /// </summary>
     public List<TBody> Body = new List<TBody>();
-
-    private Vector3 NextPos = Vector3.zero;
-    private Vector3 NextPartPos = Vector3.zero;
+    /// <summary>
+    /// Позиция следования головы змеи
+    /// </summary>
+    public Vector3 NextPos = Vector3.zero;
+    /// <summary>
+    /// Триггер следования частей тела за головой
+    /// </summary>
     bool MoveBody = false;
-
-    // Use this for initialization
-    void Start()
-    {
-        if (GameMap != null) NextPos = GameMap.GetPos(WidthPos, LengthPos);
-        transform.localPosition = NextPos;
-    }
-
+    /// <summary>
+    /// Метод замены или добавления части тела змее
+    /// </summary>
     public void AddNewPart(bool _new, int _id = -1)
     {
         GameObject Snake;
@@ -63,7 +97,8 @@ public class TSnake : MonoBehaviour
 
             MoveBody = false;
             Body.Add(new TBody(transform.localPosition, Direction, Snake.transform));
-        } else
+        }
+        else
         {
             Snake = (GameObject)Object.Instantiate(Resources.Load("Prefabs/SnakeFinish"));
             Snake.transform.SetParent(transform.parent);
@@ -78,15 +113,8 @@ public class TSnake : MonoBehaviour
         }
     }
 
-    private Vector2 MouseDownPos;
-    // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            AddNewPart(true);
-        }
-
         if ((NextPos - transform.localPosition).sqrMagnitude > 0.001f)
         {
             transform.localPosition += (NextPos - transform.localPosition).normalized * Speed * Time.deltaTime;
@@ -107,12 +135,11 @@ public class TSnake : MonoBehaviour
         }
         else
         {
+            //Обновление информации частям тела змеи о пути следования
             if (Body.Count > 0)
             {
                 for (int _part = 0; _part < Body.Count - 1; _part++)
                 {
-                    Body[_part].WidthPos = WidthPos;
-                    Body[_part].LengthPos = LengthPos;
                     Body[_part].Position = Body[_part + 1].Position;
                     Body[_part].NextDirection = Body[_part + 1].CurDirection;
                 }
@@ -120,6 +147,7 @@ public class TSnake : MonoBehaviour
                 Body[Body.Count - 1].Position = transform.localPosition;
                 Body[Body.Count - 1].NextDirection = Direction;
             }
+            //Поворот головы
             if (MoveState == 0)
             {
                 Direction = Direction > 0 ? (byte)(Direction - 1) : (byte)3;
@@ -133,19 +161,17 @@ public class TSnake : MonoBehaviour
             MoveState = 1;
             MoveBody = true;
             ChackCollider = true;
-
-            if (Direction == 2) WidthPos--;
-            if (Direction == 1) LengthPos--;
-            if (Direction == 3) LengthPos++;
-            if (Direction == 0) WidthPos++;
-
-            WidthPos = Mathf.Clamp(WidthPos, 0, GameMap.MapWidth - 1);
-            LengthPos = Mathf.Clamp(LengthPos, 0, GameMap.MapLength - 1);
-
-            if (GameMap != null) NextPos = GameMap.GetPos(WidthPos, LengthPos);
+            //Определение следующей точки на карте для следования
+            NextPos = transform.GetChild(0).right * GameMap.Step + transform.localPosition;
+            WidthPos = Mathf.RoundToInt(NextPos.x / GameMap.Step + GameMap.MapWidth / 2);
+            LengthPos = Mathf.RoundToInt(NextPos.z / GameMap.Step + GameMap.MapLength / 2);
+            NextPos.x = (WidthPos - GameMap.MapWidth / 2) * GameMap.Step;
+            NextPos.z = (LengthPos - GameMap.MapLength / 2) * GameMap.Step;
         }
     }
-
+    /// <summary>
+    /// Уничтожение змеи
+    /// </summary>
     public void Die()
     {
         for (int _part = Body.Count - 1; _part >= 0; _part--)
@@ -153,23 +179,27 @@ public class TSnake : MonoBehaviour
         Body.Clear();
         GameObject.Destroy(this.gameObject);
     }
-
+    /// <summary>
+    /// Проверка столкновений с предметами на карте
+    /// </summary>
     void OnTriggerEnter(Collider other)
     {
         if (!ChackCollider) return;
-
+        //Кушаем яблоко
         if (other.tag == "Apple")
         {
             GameMap.EatApple(WidthPos, LengthPos);
             AddNewPart(true);
         }
-
+        //Убиваем змею
         if (other.tag == "Wall" || (other.tag == "Corner" && Body.Count > 3)) Main.SnakeReport(this);
-
-        if (other.tag == "Body") {
+        //Делим змею
+        if (other.tag == "Body")
+        {
             int _part;
             for (_part = 1; _part < Body.Count - 3; _part++)
-                if (Body[_part].transform.gameObject.name == other.gameObject.transform.parent.gameObject.name) {
+                if (Body[_part].transform.gameObject.name == other.gameObject.transform.parent.gameObject.name)
+                {
                     Main.SnakeReport(this, _part);
                     ChackCollider = false;
                     break;

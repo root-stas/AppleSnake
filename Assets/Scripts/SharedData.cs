@@ -12,7 +12,9 @@
         TARGET_CREATOR = 4,
         EXIT_GAME = 5,
     }
-
+    /// <summary>
+    /// Тип анимации элементов карты
+    /// </summary>
     public enum EPartState
     {
         SHOW = 0,
@@ -23,12 +25,13 @@
 
     public class SharedData
     {
-
         /// <summary>
-        /// Состояние игры, принимает значения из объявленных констант MENU, GAME, GAME_DIALOG, EDITOR, EDITOR_DIALOG
+        /// Состояние игры
         /// </summary>
         static public EState GameState = EState.MENU;
-
+        /// <summary>
+        /// Глобальный счетчик созданых частей тела змей
+        /// </summary>
         static public int BodyCount = 0;
         /// <summary>
         /// Текущий счет игры
